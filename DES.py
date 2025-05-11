@@ -97,7 +97,7 @@ def xor_comparador(chave_k, chave_ep):
 
     chave_final_xor = ""
 
-    for i in range(8):
+    for i in range(len(chave_k)):
         if chave_k[i] == chave_ep[i]:
             chave_final_xor += "0"
         else:
@@ -135,6 +135,20 @@ def s_boxes(chave_xor):
     valor_final = valor_s0+valor_s1
     return valor_final 
 
+def permutacao_p4(valor_s_box):
+    p4 = [1,3,2,0]
+    valor_final = ""
+    for n in p4:
+        valor_final += valor_s_box[n]
+    return valor_final
+
+def rodada_feistel_rodada_2_k2(chave):
+    ep = "30121230"
+    chave_lista = []
+    for c in ep:
+        chave_lista.append(chave[int(c)])
+    return chave_lista 
+
 bloco_de_dados = 11010111
 chave_inicial = 1010000010
 nova_chave_p10 = permutacao_p10(chave_inicial)
@@ -162,3 +176,29 @@ print(ep_R)
 xor_k1_epR = xor_comparador(chave_k1, ep_R)
 
 valor_s_boxes = s_boxes(xor_k1_epR)
+valor_s_boxes_p4 = permutacao_p4(valor_s_boxes)
+print(valor_s_boxes_p4)
+
+l_xor_p4 = xor_comparador(chave_esquerda_ip, valor_s_boxes_p4)
+
+#Troca de metades
+chave_esquerda_ip = chave_direita_ip
+chave_direita_ip = l_xor_p4
+
+print("-----------------------------------------------------------")
+#Para k2
+print(chave_direita_ip)
+ep_R_k2 = rodada_feistel_rodada_2_k2(chave_direita_ip)
+print(ep_R_k2)
+
+xor_k2_epR = xor_comparador(nova_chave_p8_k2, ep_R_k2)
+
+valor_s_boxes_k2 = s_boxes(xor_k2_epR)
+valor_s_boxes_p4_k2 = permutacao_p4(valor_s_boxes_k2)
+print(valor_s_boxes_p4_k2)
+
+l_xor_p4_k2 = xor_comparador(chave_esquerda_ip, valor_s_boxes_p4_k2)
+chave_esquerda_ip = l_xor_p4_k2
+
+final_antes_de_ip = chave_esquerda_ip + chave_direita_ip
+print(final_antes_de_ip)
