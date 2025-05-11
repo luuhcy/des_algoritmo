@@ -1,5 +1,20 @@
 #Geração de Chaves
 
+# Matrizes
+S0 = [
+  [1, 0, 3, 2],
+  [3, 2, 1, 0],
+  [0, 2, 1, 3],
+  [3, 1, 3, 2]
+]
+S1 = [
+  [0, 1, 2, 3],
+  [2, 0, 1, 3],
+  [3, 0, 1, 0],
+  [2, 1, 0, 3]
+]
+# --------------------------------------------------------------
+
 def permutacao_p10(chave_ini):
     chave_ini_str = str(chave_ini)
     p10 = [2, 4, 1, 6, 3, 9, 0, 8, 7, 5]
@@ -65,33 +80,67 @@ def permutacao_inicial(bloco_de_dados):
 
 
 def rodada_feistel(chave_direita_ip):
-    ep = [3, 0, 1, 2, 1, 2, 3, 0]
-    nova_chave = []
-    before = ""
-    reverter_chave= ""
-    
+    ep = "30121230"
+    chave_inteira_ip = ""
     for i in ep:
-        before += str(i)
-    
-    for i in range(len(ep)):
-        nova_chave.append(before[ep[i]])
-        
-    nova_chave_esquerda = nova_chave[:4]
-    for i in range(nova_chave_esquerda):
-        reverter_chave = nova_chave_esquerda[i]
+        chave_inteira_ip += chave_direita_ip[int(i)]
 
-        
-        
-    return reverter_chave
+    return chave_inteira_ip
+
+def xor_comparador(chave_k, chave_ep):
+    chave_k_string = ""
+    for c in chave_k:
+        chave_k_string += c
+
+    chave_k = chave_k_string
+    chave_ep = str(chave_ep)
+
+    chave_final_xor = ""
+
+    for i in range(8):
+        if chave_k[i] == chave_ep[i]:
+            chave_final_xor += "0"
+        else:
+            chave_final_xor += "1"
+    return chave_final_xor
+
+def binario_deciaml(valor_binario):
+    dicionario_binario = {"00":"0", "01":"1", "10":"2", "11":"3"}
+    return dicionario_binario[valor_binario]
+
+def decimal_binario(valor_decimal):
+    dicionario_decimal = {0:"00", 1:"01", 2:"10", 3:"11"}
+    return dicionario_decimal[valor_decimal]
+
+def s_boxes(chave_xor):
+    str(chave_xor)
+    s0 = chave_xor[:4]
+    s1 = chave_xor[4:]
+
+    soma_externa_s0 = s0[0]+s0[3]
+    soma_interna_s0 = s0[1]+s0[2]
+    soma_externa_s1 = s1[0]+s1[3]
+    soma_interna_s1 = s1[1]+s1[2]
+
+    soma_externa_s0 = binario_deciaml(soma_externa_s0)
+    soma_interna_s0 = binario_deciaml(soma_interna_s0)
+    soma_externa_s1 = binario_deciaml(soma_externa_s1)
+    soma_interna_s1 = binario_deciaml(soma_interna_s1)
     
-    
+    numero_matriz_s0 = S0[int(soma_externa_s0)][int(soma_interna_s0)]
+    numero_matriz_s1 = S1[int(soma_externa_s1)][int(soma_interna_s1)]
+
+    valor_s0 = decimal_binario(numero_matriz_s0)
+    valor_s1 = decimal_binario(numero_matriz_s1)
+    valor_final = valor_s0+valor_s1
+    return valor_final 
 
 bloco_de_dados = 11010111
 chave_inicial = 1010000010
 nova_chave_p10 = permutacao_p10(chave_inicial)
 nova_chave_p10= divisao_deslocamento_p10(nova_chave_p10)
-nova_chave_p8 = permutacao_p8(nova_chave_p10) #p8 k1
-print(nova_chave_p8)
+chave_k1 = permutacao_p8(nova_chave_p10) #p8 k1
+print(chave_k1)
 print("-----------------------------------------------------------")
 nova_chave_p10_k2 = divisao_deslocamento_duplo_p10(nova_chave_p10)
 nova_chave_p8_k2 = permutacao_p8(nova_chave_p10_k2) #k2
@@ -107,5 +156,9 @@ chave_direita_ip = nova_chave_ip[:4]
 print(chave_direita_ip)
 print(chave_esquerda_ip)
 print("-----------------------------------------------------------")
-feistel = rodada_feistel(chave_direita_ip)
-print(feistel)
+ep_R = rodada_feistel(chave_direita_ip)
+print(ep_R)
+
+xor_k1_epR = xor_comparador(chave_k1, ep_R)
+
+valor_s_boxes = s_boxes(xor_k1_epR)
