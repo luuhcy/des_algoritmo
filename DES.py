@@ -149,6 +149,13 @@ def rodada_feistel_rodada_2_k2(chave):
         chave_lista.append(chave[int(c)])
     return chave_lista 
 
+def permutacao_inversa(chave):
+    ip = "30246175"
+    ip_final = ""
+    for c in ip:
+        ip_final += chave[int(c)]
+    return ip_final
+
 bloco_de_dados = 11010111
 chave_inicial = 1010000010
 nova_chave_p10 = permutacao_p10(chave_inicial)
@@ -202,3 +209,8 @@ chave_esquerda_ip = l_xor_p4_k2
 
 final_antes_de_ip = chave_esquerda_ip + chave_direita_ip
 print(final_antes_de_ip)
+
+print("-----------------------------------------------------------")
+
+ip_inverso = permutacao_inversa(final_antes_de_ip)
+print(ip_inverso)
