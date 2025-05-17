@@ -21,14 +21,13 @@ def permutacao_p10(chave_ini):
     nova_chave = []
     for i in range(len(p10)):
         nova_chave.append(chave_ini_str[p10[i]])
-    print(nova_chave)    
     return nova_chave
 
 def divisao_deslocamento_p10(chave):
     chave_esquerda = chave[:5]
     chave_direita = chave[5:]
-    print(chave_esquerda)    
-    print(chave_direita)    
+    print("Chave L:",chave_esquerda)    
+    print("Chave R:",chave_direita)    
 
     chave_ref = chave_esquerda[1:]
     chave_ref.append(chave_esquerda[0])
@@ -38,6 +37,9 @@ def divisao_deslocamento_p10(chave):
     chave_ref.append(chave_direita[0]) 
     chave_direita = chave_ref
 
+    print("Deslocamento ls-1 esquerda: ", chave_esquerda)
+    print("Deslocamento ls-1 direita: ", chave_direita)
+
     return chave_esquerda + chave_direita
 
 def permutacao_p8(chave):
@@ -45,7 +47,6 @@ def permutacao_p8(chave):
     nova_chave = []
     for i in range(len(p8)):
         nova_chave.append(chave[p8[i]])
-    print(nova_chave)    
     return nova_chave
 
 def divisao_deslocamento_duplo_p10(chave):
@@ -53,8 +54,6 @@ def divisao_deslocamento_duplo_p10(chave):
     chave = divisao_deslocamento_p10(chave)
     chave_esquerda = chave[:5]
     chave_direita = chave[5:]
-    print(chave_esquerda)    
-    print(chave_direita)    
 
     chave_ref = chave_esquerda[1:]
     chave_ref.append(chave_esquerda[0])
@@ -112,6 +111,15 @@ def decimal_binario(valor_decimal):
     dicionario_decimal = {0:"00", 1:"01", 2:"10", 3:"11"}
     return dicionario_decimal[valor_decimal]
 
+def xor_comparador_k2(k2, epr):
+    nova_chave = ""
+    for i in range(len(k2)):
+        if k2[i] == epr[i]:
+            nova_chave += "0"
+        else:
+            nova_chave += "1"
+    return nova_chave
+
 def s_boxes(chave_xor):
     str(chave_xor)
     s0 = chave_xor[:4]
@@ -158,62 +166,72 @@ def permutacao_inversa(chave):
 
 
 def encriptar_des(bloco_de_dados, chave_inicial):
+    print("==========>ENCRIPTAÇÃO<==========")
     nova_chave_p10 = permutacao_p10(chave_inicial)
+    print("Permutação P10: ", nova_chave_p10)
     nova_chave_p10= divisao_deslocamento_p10(nova_chave_p10)
+    print("Chave deslocada esquerda e direita juntas: ", nova_chave_p10)
     chave_k1 = permutacao_p8(nova_chave_p10) #p8 k1
+    print("Chave k1: ", chave_k1)
     print(chave_k1)
-    print("-----------------------------------------------------------")
+
+    print("-----Deslocamento circular à esquerda (LS2)-----")
     nova_chave_p10_k2 = divisao_deslocamento_duplo_p10(nova_chave_p10)
+    print("K2 10 bits: ", nova_chave_p10_k2)
     nova_chave_p8_k2 = permutacao_p8(nova_chave_p10_k2) #k2
-    print(nova_chave_p8_k2)
-    print("-----------------------------------------------------------")
+    print("K2: ", nova_chave_p8_k2)
+
+    print("-----Permutação Inicial (IP)-----")
     nova_chave_ip = permutacao_inicial(bloco_de_dados)
-    print(nova_chave_ip)
-    print("-----------------------------------------------------------")
+    print("Ip: ", nova_chave_ip)
 
+    print("-----Primeira rodada com k1-----")
     chave_esquerda_ip = nova_chave_ip[:4]
-    print(chave_esquerda_ip)
     chave_direita_ip = nova_chave_ip[:4]
-    print(chave_direita_ip)
-    print(chave_esquerda_ip)
-    print("-----------------------------------------------------------")
+    print("Chave direita ip: ", chave_direita_ip)
+    print("Chave esquerda ip: ", chave_esquerda_ip)
+
     ep_R = rodada_feistel(chave_direita_ip)
-    print(ep_R)
+    print("EP(R): ", ep_R)
 
+    print("-----XOR com K1-----")
     xor_k1_epR = xor_comparador(chave_k1, ep_R)
+    print("XOR de k1: ", xor_k1_epR)
 
+    print("-----Subtituição S-Boxes padrão-----")
     valor_s_boxes = s_boxes(xor_k1_epR)
     valor_s_boxes_p4 = permutacao_p4(valor_s_boxes)
-    print(valor_s_boxes_p4)
+    print("Valor S-Boxes p4: ", valor_s_boxes_p4)
 
     l_xor_p4 = xor_comparador(chave_esquerda_ip, valor_s_boxes_p4)
-
+    print("XOR com L: ", l_xor_p4)
     #Troca de metades
     chave_esquerda_ip = chave_direita_ip
     chave_direita_ip = l_xor_p4
+    print("Swap L e R:", chave_esquerda_ip, chave_direita_ip )
 
-    print("-----------------------------------------------------------")
+    print("-----Segunda Rodada-----")
     #Para k2
-    print(chave_direita_ip)
     ep_R_k2 = rodada_feistel_rodada_2_k2(chave_direita_ip)
-    print(ep_R_k2)
+    print("EP(R): ", ep_R_k2)
 
-    xor_k2_epR = xor_comparador(nova_chave_p8_k2, ep_R_k2)
+    xor_k2_epR = xor_comparador_k2(nova_chave_p8_k2, ep_R_k2)
+    print("XOR com k2: ", xor_k2_epR)
 
     valor_s_boxes_k2 = s_boxes(xor_k2_epR)
     valor_s_boxes_p4_k2 = permutacao_p4(valor_s_boxes_k2)
-    print(valor_s_boxes_p4_k2)
+    print("S-Boxes k2 -> P4 e S1: ", valor_s_boxes_p4_k2, valor_s_boxes_k2)
 
     l_xor_p4_k2 = xor_comparador(chave_esquerda_ip, valor_s_boxes_p4_k2)
     chave_esquerda_ip = l_xor_p4_k2
 
     final_antes_de_ip = chave_esquerda_ip + chave_direita_ip
-    print(final_antes_de_ip)
+    print("Resultado concatenado da segunda rodada: ", final_antes_de_ip)
 
-    print("-----------------------------------------------------------")
+    print("-----IP Reverso-----")
 
     ip_inverso = permutacao_inversa(final_antes_de_ip)
-    print(ip_inverso)
+    print("Encriptação: ", ip_inverso)
 
 # Adicione o valor do bloco de dados e da chave de dados de 8 bits
 bloco_de_dados = 11010111
