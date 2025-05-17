@@ -234,7 +234,7 @@ def encriptar_des(bloco_de_dados, chave_inicial):
     print("Encriptação: ", ip_inverso)
 
 def descriptografar_des(bloco_criptografado, chave_inicial):
-    print("==========>DESCRIPTOGRAFIA<==========")
+    print("\n==========>DESCRIPTOGRAFIA<==========")
     
     # Geração de K1 e K2
     nova_chave_p10 = permutacao_p10(chave_inicial)
@@ -280,9 +280,128 @@ def descriptografar_des(bloco_criptografado, chave_inicial):
     resultado_final = permutacao_inversa(resultado_concatenado)
     print("Texto descriptografado:", resultado_final)
 
+#------------------------------------------------------------------------------------------
+
+def sdes_encrypt_block(bloco_bits, chave_bits):
+    # Executa o mesmo que sua função encriptar_des, mas retorna apenas o valor cifrado
+    nova_chave_p10 = permutacao_p10(chave_bits)
+    nova_chave_p10 = divisao_deslocamento_p10(nova_chave_p10)
+    chave_k1 = permutacao_p8(nova_chave_p10)
+
+    nova_chave_p10_k2 = divisao_deslocamento_duplo_p10(nova_chave_p10)
+    chave_k2 = permutacao_p8(nova_chave_p10_k2)
+
+    bloco_ip = permutacao_inicial(bloco_bits)
+    L = bloco_ip[:4]
+    R = bloco_ip[4:]
+
+    ep = rodada_feistel(R)
+    xor1 = xor_comparador(chave_k1, ep)
+    sbox_out = s_boxes(xor1)
+    p4 = permutacao_p4(sbox_out)
+    L1 = xor_comparador(L, p4)
+
+    # Swap L e R
+    L, R = R, L1
+
+    ep = rodada_feistel(R)
+    xor2 = xor_comparador(chave_k2, ep)
+    sbox_out2 = s_boxes(xor2)
+    p4_2 = permutacao_p4(sbox_out2)
+    L2 = xor_comparador(L, p4_2)
+
+    final_concat = L2 + R
+    cifra = permutacao_inversa(final_concat)
+    return cifra
+def sdes_decrypt_block(bloco_bits, chave_bits):
+    nova_chave_p10 = permutacao_p10(chave_bits)
+    nova_chave_p10 = divisao_deslocamento_p10(nova_chave_p10)
+    chave_k1 = permutacao_p8(nova_chave_p10)
+
+    nova_chave_p10_k2 = divisao_deslocamento_duplo_p10(nova_chave_p10)
+    chave_k2 = permutacao_p8(nova_chave_p10_k2)
+
+    bloco_ip = permutacao_inicial(bloco_bits)
+    L = bloco_ip[:4]
+    R = bloco_ip[4:]
+
+    # Primeira rodada com k2
+    ep = rodada_feistel(R)
+    xor1 = xor_comparador(chave_k2, ep)
+    sbox_out = s_boxes(xor1)
+    p4 = permutacao_p4(sbox_out)
+    L1 = xor_comparador(L, p4)
+
+    # Swap
+    L, R = R, L1
+
+    # Segunda rodada com k1
+    ep = rodada_feistel(R)
+    xor2 = xor_comparador(chave_k1, ep)
+    sbox_out2 = s_boxes(xor2)
+    p4_2 = permutacao_p4(sbox_out2)
+    L2 = xor_comparador(L, p4_2)
+
+    final_concat = L2 + R
+    decifrado = permutacao_inversa(final_concat)
+    return decifrado
+
+def modo_ecb_encrypt(mensagem_em_blocos, chave):
+    resultado = []
+    for bloco in mensagem_em_blocos:
+        cifra = sdes_encrypt_block(bloco, chave)
+        resultado.append(cifra)
+    return resultado
+
+def modo_ecb_decrypt(cifrado_em_blocos, chave):
+    resultado = []
+    for bloco in cifrado_em_blocos:
+        texto = sdes_decrypt_block(bloco, chave)
+        resultado.append(texto)
+    return resultado
+
+def xor_bits(a, b):
+    return ''.join(['0' if a[i] == b[i] else '1' for i in range(len(a))])
+
+def modo_cbc_encrypt(mensagem_em_blocos, chave, iv):
+    resultado = []
+    bloco_anterior = iv
+    for bloco in mensagem_em_blocos:
+        xorado = xor_bits(bloco, bloco_anterior)
+        cifra = sdes_encrypt_block(xorado, chave)
+        resultado.append(cifra)
+        bloco_anterior = cifra
+    return resultado
+
+def modo_cbc_decrypt(cifrado_em_blocos, chave, iv):
+    resultado = []
+    bloco_anterior = iv
+    for bloco in cifrado_em_blocos:
+        decifrado = sdes_decrypt_block(bloco, chave)
+        original = xor_bits(decifrado, bloco_anterior)
+        resultado.append(original)
+        bloco_anterior = bloco
+    return resultado
+
 
 # Adicione o valor do bloco de dados e da chave de dados de 8 bits
 bloco_de_dados = 11010111
 chave_inicial = 1010000010
 encriptar_des(bloco_de_dados, chave_inicial)
 descriptografar_des("10101000", chave_inicial)
+
+mensagem = ["11010111", "01101100", "10111010", "11110000"]
+chave = "1010000010"
+iv = "01010101"
+
+print("\n\n===== ECB =====")
+cifrado_ecb = modo_ecb_encrypt(mensagem, chave)
+print("Cifrado ECB:", cifrado_ecb)
+decifrado_ecb = modo_ecb_decrypt(cifrado_ecb, chave)
+print("Decifrado ECB:", decifrado_ecb)
+
+print("\n===== CBC =====")
+cifrado_cbc = modo_cbc_encrypt(mensagem, chave, iv)
+print("Cifrado CBC:", cifrado_cbc)
+decifrado_cbc = modo_cbc_decrypt(cifrado_cbc, chave, iv)
+print("Decifrado CBC:", decifrado_cbc)
