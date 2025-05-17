@@ -233,7 +233,56 @@ def encriptar_des(bloco_de_dados, chave_inicial):
     ip_inverso = permutacao_inversa(final_antes_de_ip)
     print("Encriptação: ", ip_inverso)
 
+def descriptografar_des(bloco_criptografado, chave_inicial):
+    print("==========>DESCRIPTOGRAFIA<==========")
+    
+    # Geração de K1 e K2
+    nova_chave_p10 = permutacao_p10(chave_inicial)
+    nova_chave_p10= divisao_deslocamento_p10(nova_chave_p10)
+    chave_k1 = permutacao_p8(nova_chave_p10)
+    
+    nova_chave_p10_k2 = divisao_deslocamento_duplo_p10(nova_chave_p10)
+    chave_k2 = permutacao_p8(nova_chave_p10_k2)
+
+    # Permutação inicial
+    bloco_permutado = permutacao_inicial(bloco_criptografado)
+    print("IP: ", bloco_permutado)
+
+    L = bloco_permutado[:4]
+    R = bloco_permutado[4:]
+    print("L:", L)
+    print("R:", R)
+
+    # Rodada 1 com K2
+    print("-----Primeira rodada com K2-----")
+    ep_R = rodada_feistel(R)
+    xor_k2_epR = xor_comparador(chave_k2, ep_R)
+    valor_s_boxes = s_boxes(xor_k2_epR)
+    valor_s_boxes_p4 = permutacao_p4(valor_s_boxes)
+    L_novo = xor_comparador(L, valor_s_boxes_p4)
+
+    # Swap
+    L, R = R, L_novo
+    print("Swap L e R:", L, R)
+
+    # Rodada 2 com K1
+    print("-----Segunda rodada com K1-----")
+    ep_R = rodada_feistel(R)
+    xor_k1_epR = xor_comparador(chave_k1, ep_R)
+    valor_s_boxes = s_boxes(xor_k1_epR)
+    valor_s_boxes_p4 = permutacao_p4(valor_s_boxes)
+    L_novo = xor_comparador(L, valor_s_boxes_p4)
+
+    resultado_concatenado = L_novo + R
+    print("Concatenação pós rodadas:", resultado_concatenado)
+
+    # Permutação inversa (IP⁻¹)
+    resultado_final = permutacao_inversa(resultado_concatenado)
+    print("Texto descriptografado:", resultado_final)
+
+
 # Adicione o valor do bloco de dados e da chave de dados de 8 bits
 bloco_de_dados = 11010111
 chave_inicial = 1010000010
 encriptar_des(bloco_de_dados, chave_inicial)
+descriptografar_des("10101000", chave_inicial)
