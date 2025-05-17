@@ -187,7 +187,7 @@ def encriptar_des(bloco_de_dados, chave_inicial):
 
     print("-----Primeira rodada com k1-----")
     chave_esquerda_ip = nova_chave_ip[:4]
-    chave_direita_ip = nova_chave_ip[:4]
+    chave_direita_ip = nova_chave_ip[4:]
     print("Chave direita ip: ", chave_direita_ip)
     print("Chave esquerda ip: ", chave_esquerda_ip)
 
