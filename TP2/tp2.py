@@ -1,4 +1,6 @@
 #!/usr/bin/env python3
+import base64
+
 SBOX = {
     0x0: 0x9, 0x1: 0x4, 0x2: 0xA, 0x3: 0xB,
     0x4: 0xD, 0x5: 0x1, 0x6: 0x8, 0x7: 0x5,
@@ -35,7 +37,7 @@ def definicao_nibbles(bits):
             i += 1
     return lista_nibbles
 
-def matriz_de_nibbles(nibble):
+def nibbles_em_matriz(nibble):
     matriz = [[nibble[0],nibble[1]],[nibble[2],nibble[3]]]
     return matriz
 
@@ -50,36 +52,145 @@ def add_round_key(matriz_mensagem, matriz_chave):
     ]
     return round
 
-def substituicao_nibbles_sbox(matriz):
+def sub_nibbles(matriz):
     novos_nibbles = [
         [SBOX[matriz[0][0]], SBOX[matriz[0][1]]],
         [SBOX[matriz[1][0]], SBOX[matriz[1][1]]]
     ]
     return novos_nibbles
 
-def inverter_segunda_linha_matriz(state):
+def shift_rows(state):
     matriz_invertida = [
         [state[0][0], state[0][1]],
         [state[1][1], state[1][0]]
     ]
     return matriz_invertida
 
+def multiplicacao_campo_finito(num1, num2):
+    resultado = 0
+    for i in range(4):
+        # Verifica se o bit menos significativo de num2 é 1
+        if num2 & 1:
+            # Xor do acumulador com num1
+            resultado ^= num1
 
+        # Verifica se o bit mais alto do num1 está ligado. Para evitar transbordar
+        carry = num1 & 0x8
+
+        # Move os bits do num1 para a esquerda (Multiplica por 2)
+        num1 <<= 1
+
+        if carry:
+            # Reduz pelo polinômio irreducível
+            num1 ^= 0x13
+
+        # Remove bits fora dos 4
+        num1 &= 0xF
+
+        # Move 1 bit para a direita de num2
+        num2 >>= 1
+
+    return resultado
+
+def mix_columns(nibbles):
+    n1, n2 = nibbles[0]
+    n3, n4 = nibbles[1]
+
+    nibbles_campo_finito = [[multiplicacao_campo_finito(n1, 1) ^ multiplicacao_campo_finito(n3, 4), multiplicacao_campo_finito(n2, 1) ^ multiplicacao_campo_finito (n4, 4)],
+    [multiplicacao_campo_finito(n1, 4) ^ multiplicacao_campo_finito(n3, 1), multiplicacao_campo_finito(n2, 4) ^ multiplicacao_campo_finito(n4, 1)]]
+
+    return nibbles_campo_finito
+
+def key_expansion(nibbles_chave):
+    w = [nibbles_chave[0], nibbles_chave[1], nibbles_chave[2], nibbles_chave[3]]
+
+    rcon = [0x8, 0x3]  # Constantes de round
+
+    # w4 e w5
+    t = [SBOX[w[3]] ^ rcon[0], SBOX[w[2]]]
+    w4 = w[0] ^ t[0]
+    w5 = w[1] ^ t[1]
+
+    # w6 e w7
+    w6 = w[2] ^ w4
+    w7 = w[3] ^ w5
+
+    # w8 e w9
+    t = [SBOX[w7] ^ rcon[1], SBOX[w6]]
+    w8 = w4 ^ t[0]
+    w9 = w5 ^ t[1]
+
+    # w10 e w11
+    w10 = w6 ^ w8
+    w11 = w7 ^ w9
+
+    round_keys = [
+        nibbles_em_matriz([w[0], w[1], w[2], w[3]]),
+        nibbles_em_matriz([w4, w5, w6, w7]),
+        nibbles_em_matriz([w8, w9, w10, w11])
+    ]
+
+    return round_keys
+
+def matriz_em_hex(matriz):
+    nibbles = matriz_em_nibbles(matriz)
+    return ''.join(f'{n:X}' for n in nibbles)
+
+def encriptacao(lista_nibble, chave_nibble):
+    resultado = nibbles_em_matriz(lista_nibble)
+    rodada_chave = key_expansion(chave_nibble)
+
+    print("Estado inicial: ", matriz_em_hex(resultado))
+    resultado = add_round_key(resultado, rodada_chave[0])
+
+    print("AddRoundKey: ", matriz_em_hex(resultado))
+
+    # Primeira Rodada
+    print("PRIMEIRA RODADA")
+
+    resultado = sub_nibbles(resultado)
+    print("SubNibbles: ", matriz_em_hex(resultado))
+
+    resultado = shift_rows(resultado)
+    print("ShiftRows: ", matriz_em_hex(resultado))
+
+    resultado = mix_columns(resultado)
+    print("MixColumns: ", matriz_em_hex(resultado))
+
+    state = add_round_key(resultado, rodada_chave[1])
+    print("AddRoundKey 2: ", matriz_em_hex(resultado))
+
+    # Segunda Rodada
+    print("SEGUNDA RODADA")
+
+    resultado = sub_nibbles(resultado)
+    print("SubNibbles: ", matriz_em_hex(resultado))
+    resultado = shift_rows(resultado)
+    print("ShiftRows: ", matriz_em_hex(resultado))
+    resultado = add_round_key(resultado, rodada_chave[2])
+    print("AddRoundKey 2: ", matriz_em_hex(resultado))
+
+    return matriz_em_nibbles(resultado)
+
+# Mensagem ---------------------------------------------------------
 mensagem = "A"
-msg_em_bits = string_em_bits(mensagem)
-print("MSG: String em bits: ", msg_em_bits)
-msg_bits_em_nibbles = definicao_nibbles(msg_em_bits)
-print("MSG: Definição dos Nibbles: ", msg_bits_em_nibbles)
-matriz_msg = matriz_de_nibbles(msg_bits_em_nibbles)
-print("MSG: Nibbles -> Matriz: ", matriz_msg)
-
 chave = "k"
-chave_em_bits = string_em_bits(chave)
-print("CHAVE: String em bits: ", chave_em_bits)
-bits_em_nibbles = definicao_nibbles(chave_em_bits)
-print("CHAVE: Definição dos Nibbles: ", bits_em_nibbles)
-matriz_chave = matriz_de_nibbles(bits_em_nibbles)
-print("CHAVE: Nibbles -> Matriz: ", matriz_chave)
 
-round_key = add_round_key(matriz_msg, matriz_chave)
-print(round_key)
+mensagem_bits = string_em_bits(mensagem).ljust(16,"0")[:16]
+chave_bits = string_em_bits(chave).ljust(16,"0")[:16]
+
+mensagem_nibbles = definicao_nibbles(mensagem_bits)
+chave_nibbles = definicao_nibbles(chave_bits)
+
+cifra_nibble = encriptacao(mensagem_nibbles, chave_nibbles)
+
+cifra_hexadecimal = ''
+for n in cifra_nibble:
+    hex_num = format(n, 'X')
+    cifra_hexadecimal += hex_num
+
+cifra_bytes = bytes(cifra_nibble)
+cifra_b64 = base64.b64encode(cifra_bytes).decode()
+
+print("Texto cifrado em hexadecimal: ", cifra_hexadecimal)
+print("Texto cifrado em base64: ", cifra_b64)
