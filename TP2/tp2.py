@@ -1,5 +1,9 @@
 #!/usr/bin/env python3
 import base64
+from cryptography.hazmat.primitives.ciphers import Cipher, algorithms, modes
+from cryptography.hazmat.backends import default_backend
+import os
+import time
 
 SBOX = {
     0x0: 0x9, 0x1: 0x4, 0x2: 0xA, 0x3: 0xB,
@@ -173,9 +177,10 @@ def encriptacao(lista_nibble, chave_nibble):
     return matriz_em_nibbles(resultado)
 
 # Mensagem ---------------------------------------------------------
-mensagem = "A"
-chave = "k"
+mensagem = "ABC"
+chave = "chave"
 
+print("\nParte 1 ---------------------------")
 mensagem_bits = string_em_bits(mensagem).ljust(16,"0")[:16]
 chave_bits = string_em_bits(chave).ljust(16,"0")[:16]
 
@@ -194,3 +199,123 @@ cifra_b64 = base64.b64encode(cifra_bytes).decode()
 
 print("Texto cifrado em hexadecimal: ", cifra_hexadecimal)
 print("Texto cifrado em base64: ", cifra_b64)
+
+
+# =================================================================
+# Parte 2 ---------------------------------------------------------
+# =================================================================
+
+def encrypt_saes_ecb(msg, chave):
+    chave_bits = string_em_bits(chave).ljust(16, "0")[:16]
+    chave_nibbles = definicao_nibbles(chave_bits)
+
+    msg_bits = string_em_bits(msg)
+
+    blocos = []
+    for i in range(0, len(msg_bits), 16):
+        bloco = msg_bits[i:i+16]
+        blocos.append(bloco)
+
+    lista_cifrada = []
+
+    for bloco in blocos:
+        # Se o bloco for menor que 16, adiciona 0s
+        bloco = bloco.ljust(16, "0")
+
+        bloco_nibbles = definicao_nibbles(bloco)
+        cifra_nibble = encriptacao(bloco_nibbles, chave_nibbles)
+
+        # Nibbles em bytes
+        cifra_bytes = bytes(cifra_nibble)
+        lista_cifrada.append(cifra_bytes)
+
+    # Agrupa os blocos cifrados em bytes
+    cifra_final = b''.join(lista_cifrada)
+
+    cifra_base64 = base64.b64encode(cifra_final).decode()
+    return cifra_base64
+
+mensagem_teste_multiplos_blocos = "ABCABC"
+chave_teste_multiplos_blocos = "chave"
+
+print("\nParte 2 ---------------------------")
+resultado = encrypt_saes_ecb(mensagem_teste_multiplos_blocos, chave_teste_multiplos_blocos)
+print("Texto cifrado em Base64:", resultado)
+
+
+# =================================================================
+# Parte 3 ---------------------------------------------------------
+# =================================================================
+
+print("\nParte 3 ---------------------------")
+
+mensagem = "Mensagem teste para AES"
+
+while len(mensagem) % 16 != 0:
+    mensagem += ' '
+
+mensagem = mensagem.encode()
+
+# Chaves aleatorias
+chave = os.urandom(16)
+chave_iv = os.urandom(16)
+
+print("Chave gerada em hex:", chave.hex())
+print("IV gerado em hex:", chave_iv.hex())
+
+def base64_encode(data):
+    return base64.b64encode(data).decode()
+
+print("------ECB------")
+inicio = time.time()
+cifrar = Cipher(algorithms.AES(chave), modes.ECB(), backend=default_backend())
+encriptar = cifrar.encryptor()
+cifrado = encriptar.update(mensagem) + encriptar.finalize()
+
+fim = time.time()
+
+print("Cifragem em Base64:", base64_encode(cifrado))
+print("Tempo:", round(fim - inicio, 6), "s")
+
+
+print("------CBC------")
+inicio = time.time()
+cifrar = Cipher(algorithms.AES(chave), modes.CBC(chave_iv), backend=default_backend())
+encriptar = cifrar.encryptor()
+cifrado = encriptar.update(mensagem) + encriptar.finalize()
+
+fim = time.time()
+
+print("Cifragem em Base64:", base64_encode(cifrado))
+print("Tempo:", round(fim - inicio, 6), "s")
+
+print("------CFB------")
+inicio = time.time()
+cifrar = Cipher(algorithms.AES(chave), modes.CFB(chave_iv), backend=default_backend())
+encriptar = cifrar.encryptor()
+cifrado = encriptar.update(mensagem) + encriptar.finalize()
+fim = time.time()
+
+print("Cifragem em Base64:", base64_encode(cifrado))
+print("Tempo:", round(fim - inicio, 6), "s")
+
+print("------OFB------")
+inicio = time.time()
+cifrar = Cipher(algorithms.AES(chave), modes.OFB(chave_iv), backend=default_backend())
+encriptar = cifrar.encryptor()
+cifrado = encriptar.update(mensagem) + encriptar.finalize()
+fim = time.time()
+
+print("Cifragem em Base64):", base64_encode(cifrado))
+print("Tempo:", round(fim - inicio, 6), "s")
+
+
+print("------CTR------")
+inicio = time.time()
+cifrar = Cipher(algorithms.AES(chave), modes.CTR(chave_iv), backend=default_backend())
+encriptar = cifrar.encryptor()
+cifrado = encriptar.update(mensagem) + encriptar.finalize()
+fim = time.time()
+
+print("Cifragem em Base64:", base64_encode(cifrado))
+print("Tempo:", round(fim - inicio, 6), "s")
